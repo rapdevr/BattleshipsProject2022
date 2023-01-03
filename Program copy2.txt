@@ -1,0 +1,499 @@
+﻿/* Created for the Battleships assignment by Rishi Thiahulan 2022-23 */
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+
+namespace Battleships
+{
+    class Program
+    {
+        // creates a global array of size 8x8
+        static string[,] BattleGrid = new string[8,8];
+        static string[,] ComputerBattleGrid = new string[8,8];
+        // array for formatting labels
+        static string[] chars = {"A","B","C","D","E","F","G","H"};
+        // array to store player moves.
+        static string[,] AttackHistory = new string[8,8];
+        static int PlayerStrikes = 0;
+        static int ComputerStrikes = 0;
+        static char[] charsToTrim = {'.',' ','/',';','"'};
+        // variable that links the directiory of the save file.
+        static string filename = @"GameData.txt";
+        // int to count turns
+        static int turn = 0;
+        static void Main(string[] args)
+        {
+            // calls the menu method
+            Menu();
+
+        }
+        static void Menu()
+        {
+            // boolean variable used for error handling
+            bool done = false;
+            // do while to ensure a correct response
+            do {
+                // possible user options
+                PrintWithYellow("\nWhat would you like to do?\n");
+                PrintWithYellow("[1] - New Game");
+                PrintWithYellow("[2] - Resume Game");
+                PrintWithYellow("[3] - Show Instructions");
+                PrintWithYellow("[4] - Quit");
+                System.Console.Write("\n<INPUT> ");
+                string? input = Console.ReadLine();
+
+                if (input == "1")
+                {
+                    // calls the PlayNewGame method
+                    PlayNewGame();
+                    done = true;
+                }
+                else if (input == "2")
+                {
+                    // calls the ResumeGame method
+                    ResumeFromSave();
+                    done = true;
+                }
+                else if (input == "3")
+                {
+                    // resets the console to declutter
+                    Console.Clear();
+                    // prints the instruction set
+                    Console.WriteLine(ShowInstruction());
+                }
+                else if (input == "4")
+                {
+                    // quit
+                    Environment.Exit(0);
+                }
+                else
+                {
+                    // error message
+                    PrintWithYellow("\nInvalid entry, Retype.");
+                    // does not break loop
+                    done = false;
+                }
+
+            } while (done != true);
+        }
+        static void CheckHitOrMiss(int PosX, int PosY, int turn)
+        {
+            // type is used to reference with player needs checking, 1 is player, 2 is computer
+            if (turn % 2 == 0)
+            {
+                if (ComputerBattleGrid[PosX, PosY] == "B")
+                {
+                    AttackHistory[PosX, PosY] = "H";
+                    ComputerBattleGrid[PosX, PosY] = "H";
+                    PrintWithRed("\nTarget Hit!");
+                    PlayerStrikes++;
+                }
+                else if (ComputerBattleGrid[PosX, PosY] == "H")
+                {
+                    System.Console.WriteLine("alr hit");
+                    PrintWithRed("\nThis target has already been destroyed!");
+                    PlayerTurn(turn);
+                }
+                else if (ComputerBattleGrid[PosX, PosY] == "·")
+                {
+                    PrintWithRed("\nNo target at specified location.");
+                    AttackHistory[PosX, PosY] = "M";
+                    ComputerBattleGrid[PosX, PosY] = "M";
+                }
+                else if (ComputerBattleGrid[PosX,PosY] == "M")
+                {
+                    PrintWithYellow("\nCannot attack a previously attacked location, retry!\n");
+                    PlayerTurn(turn);
+                }
+            }
+            // if type is computer 
+            else if (turn % 2 == 1)
+            {
+                // if location contains ship, corresponding message
+                if (BattleGrid[PosX, PosY] == "B")
+                {
+                    BattleGrid[PosX, PosY] = "H";
+                    PrintWithRed("Computer has destroyed a ship!");
+                    ComputerStrikes++;
+                }
+                else if (BattleGrid[PosX, PosY] == "·")
+                {
+                    BattleGrid[PosX, PosY] = "M";
+                    PrintWithYellow("Computer didn't hit a target.");
+                }
+                else if (BattleGrid[PosX, PosY] == "M")
+                {
+                    PrintWithYellow("Computer previously attacked here, retry.");
+                    ComputerTurn(turn);
+                }
+            }
+            DrawGrid();
+        }
+        static void SetComputerGrid()
+        {
+            // for loop to interate 5 ships
+            for (int i = 0; i < 5; i++)
+            {
+                // boolean value used while generating values
+            bool gen = false;
+                do
+                {
+                    Random rnd = new Random();
+                    int GenPosX = rnd.Next(0,8);
+                    int GenPosY = rnd.Next(0,8);
+                    if (ComputerBattleGrid[GenPosX,GenPosY] != "B")
+                    {
+                        ComputerBattleGrid[GenPosX,GenPosY] = "B";
+                        gen = true;
+                    }
+                } while (gen == false);
+            }
+        }
+        static void PrintWithYellow(string input)
+        {
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine(input);
+            Console.ForegroundColor = ConsoleColor.White;
+        }
+        static void PrintWithRed(string input)
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            System.Console.WriteLine(input);
+            Console.ForegroundColor = ConsoleColor.White;
+        }
+        static void PrintWithBlue(string input)
+        {
+            Console.ForegroundColor = ConsoleColor.Blue;
+            System.Console.WriteLine(input);
+            Console.ForegroundColor = ConsoleColor.White;
+        }
+        static void SetPlayerGrid()
+        {
+            DrawGrid();
+            // iterates for a total of 5 ships
+            for (int i = 0; i < 5; i++)
+            {
+
+                string[] arrayCoords;
+                bool deploy = false;
+                do
+                {
+                    PrintWithYellow($"Please designate the location of your ships: [{i+1}/5] : FORMAT [A,1]");
+                    System.Console.Write("\n<INPUT> ");
+                    // string to store coord input from user
+                    string gridCoords = Console.ReadLine().ToUpper();
+                    gridCoords = gridCoords.Trim(charsToTrim);
+                    // array to store substrings after delimit
+                    arrayCoords = gridCoords.Split(',');
+                    if (chars.Contains(arrayCoords[0]) && Convert.ToInt32(arrayCoords[1]) < 9)
+                    {
+                        // two integers for x, y values
+                        int PosX = Array.IndexOf(chars, arrayCoords[0]);
+                        int PosY = Convert.ToInt32(arrayCoords[1]) - 1;
+                            if (BattleGrid[PosX,PosY] == "B")
+                            {
+                                // error handling if ship alr present
+                                PrintWithYellow("Ship already deployed at this location!");
+                            }
+                            else
+                            {
+                                // set position in array equal to value
+                                BattleGrid[PosX, PosY] = "B";
+                                // draws grid
+                                DrawGrid();
+                                // break
+                                deploy = true;
+                            }
+                    } 
+                    else
+                    {
+                        // error message for handling
+                        PrintWithYellow("\nCoordinates invalid, retry.\n");
+                        System.Console.Write("<INPUT> ");
+                        gridCoords = Console.ReadLine().ToUpper();
+                    } 
+                } while (deploy == false);
+            }           
+        }
+        static void SetGrids()
+        {
+           // set grid values of computer and player to placeholders
+           for (int y = 0; y < BattleGrid.GetLength(0); y++)
+           {
+            // nested for loop to complete one row of 'y' before iterating
+            for (int x = 0; x < BattleGrid.GetLength(0); x++)
+            {
+                // assign pos placeholder value
+                BattleGrid[x,y] = "·";
+                ComputerBattleGrid[x,y] = "·";
+                AttackHistory[x,y] = "·";
+            }
+           }
+           SetComputerGrid();
+           SetPlayerGrid();
+           PrintWithYellow("\nGAME BEGIN\n");
+        }
+        static void DrawGrid()
+        {
+            // array for chars for iteration when drawing the top row of labels 
+            System.Console.WriteLine();
+            // foreach to iterate through array 
+            System.Console.WriteLine("Player's BattleGrid :");
+            foreach (var character in chars)
+            {
+                // prints a character in array char
+                // block for colour 
+                Console.ForegroundColor = ConsoleColor.Blue;
+                System.Console.Write($" {character} ");
+                Console.ForegroundColor = ConsoleColor.White;
+                // end of block
+            }
+            System.Console.WriteLine();
+            // iteration to draw grid from stored array values
+            for (int y = 0; y < BattleGrid.GetLength(0); y++)
+            {
+                // nested for loop to complete one row assigned 'y', then iterate
+                for (int x = 0; x < BattleGrid.GetLength(0); x++)
+                {
+                    // fetch content at array pos x,y; print
+                    if (BattleGrid[x,y] == "B")
+                    {
+                    // block for colour
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    System.Console.Write($" {BattleGrid[x,y]} ");
+                    Console.ForegroundColor = ConsoleColor.White;
+                    // end of block
+                    }
+                    else if (BattleGrid[x,y] == "H")
+                    {
+                        // block for colour
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        System.Console.Write($" {BattleGrid[x,y]} ");
+                        Console.ForegroundColor = ConsoleColor.White;
+                        // end of block
+                    }
+                    else
+                    {
+                    System.Console.Write($" {BattleGrid[x,y]} ");
+                    }
+                }
+                // add the row labels using y as row number
+                // block also adds console color
+                Console.ForegroundColor = ConsoleColor.Blue;
+                System.Console.Write($" {y+1}");
+                Console.ForegroundColor = ConsoleColor.White;
+                // end of colour block
+                System.Console.WriteLine();
+            }
+            //////////////////////
+            // array for chars for iteration when drawing the top row of labels 
+            System.Console.WriteLine();
+            System.Console.WriteLine("Attack Sheet :");
+            // foreach to iterate through array 
+            foreach (var character in chars)
+            {
+                // prints a character in array char
+                // block for colour 
+                Console.ForegroundColor = ConsoleColor.Magenta;
+                System.Console.Write($" {character} ");
+                Console.ForegroundColor = ConsoleColor.White;
+                // end of block
+            }
+            System.Console.WriteLine();
+            // iteration to draw grid from stored array values
+            for (int y = 0; y < AttackHistory.GetLength(0); y++)
+            {
+                // nested for loop to complete one row assigned 'y', then iterate
+                for (int x = 0; x < AttackHistory.GetLength(0); x++)
+                {
+                    // fetch content at array pos x,y; print
+                    if (AttackHistory[x,y] == "H")
+                    // block for colour
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    System.Console.Write($" {AttackHistory[x,y]} ");
+                    Console.ForegroundColor = ConsoleColor.White;
+                    // end of block
+                }
+                // add the row labels using y as row number
+                // block also adds console color
+                Console.ForegroundColor = ConsoleColor.Magenta;
+                System.Console.Write($" {y+1}");
+                Console.ForegroundColor = ConsoleColor.White;
+                // end of colour block
+                System.Console.WriteLine();
+            }
+            System.Console.WriteLine();
+
+        }
+        static void SaveFile(int turn)
+        {
+            File.WriteAllText(filename, string.Empty);
+            using (StreamWriter sw = File.AppendText(filename))
+            {
+                sw.WriteLine(PlayerStrikes);
+                sw.WriteLine(ComputerStrikes);
+                sw.WriteLine(turn);
+                for (int y = 0; y < BattleGrid.GetLength(0); y++)
+                {
+                    // nested for loop to complete one row assigned 'y', then iterate
+                    for (int x = 0; x < BattleGrid.GetLength(0); x++)
+                    {
+                        sw.Write(BattleGrid[x,y] + ",");
+                    }
+                    sw.WriteLine();
+                }
+                sw.WriteLine();
+                for (int y = 0; y < ComputerBattleGrid.GetLength(0); y++)
+                {
+                    // nested for loop to complete one row assigned 'y', then iterate
+                    for (int x = 0; x < ComputerBattleGrid.GetLength(0); x++)
+                    {
+                        sw.Write(ComputerBattleGrid[x,y] + ",");
+                    }
+                    sw.WriteLine();
+                }
+                sw.WriteLine();
+                for (int y = 0; y < AttackHistory.GetLength(0); y++)
+                {
+                    // nested for loop to complete one row assigned 'y', then iterate
+                    for (int x = 0; x < AttackHistory.GetLength(0); x++)
+                    {
+                        sw.Write(AttackHistory[x,y] + ",");
+                    }
+                    sw.WriteLine();
+                }
+
+            }
+        }
+        static void ReadAndLoadFile()
+         {
+            // load values from the gamedat file into game
+            // turn count
+            int turn = Convert.ToInt32(File.ReadLines(filename).Skip(2).Take(1).First());
+            // player strike count
+            int PlayerStrikes = Convert.ToInt32(File.ReadLines(filename).Skip(0).Take(1).First());
+            // computer strike count
+            int ComputerStrikes = Convert.ToInt32(File.ReadLines(filename).Skip(1).Take(1).First());
+            // copy data from gamedat to battlegrid (pla)
+            for (int y = 0; y < 8; y++)
+            {
+                string[] row = (File.ReadLines(filename).Skip(3+y).Take(1).First()).Split(",");
+                for (int x = 0; x < 8; x++)
+                {
+                    BattleGrid[x,y] = row[x];
+                }
+            }
+            // copy data from gamedat to computerbattlegrid
+            for (int y = 0; y < ComputerBattleGrid.GetLength(0); y++)
+            {
+                string[] row = (File.ReadLines(filename).Skip(12+y).Take(1).First()).Split(",");
+                for (int x = 0; x < 8; x++)
+                {
+                    ComputerBattleGrid[x,y] = row[x];
+                }
+            }
+            // copy data from gamedat to attackhistory
+            for (int y = 0; y < AttackHistory.GetLength(0); y++)
+            {
+                string[] row = (File.ReadLines(filename).Skip(21+y).Take(1).First()).Split(",");
+                for (int x = 0; x < 8; x++)
+                {
+                    AttackHistory[x,y] = row[x];
+                }
+            }
+        }
+        static void PlayerTurn(int turn)
+        {
+            bool deploy = false;
+            do
+            {
+                PrintWithRed("<OUTPUT> ENTER TARGET COORDINATES : FORMAT [A,1]\n");
+                System.Console.Write("<INPUT> ");
+                // string to store coord input from user
+                string targetCoords = Console.ReadLine().ToUpper();
+                targetCoords = targetCoords.Trim(charsToTrim);
+                // array to store substrings after delimit
+                string[] attackCoords;
+                attackCoords = targetCoords.Split(',');
+                if (chars.Contains(attackCoords[0]) && Convert.ToInt32(attackCoords[1]) < 9)
+                {
+                    // two integers for x, y values
+                    int PosX = Array.IndexOf(chars, attackCoords[0]);
+                    int PosY = Convert.ToInt32(attackCoords[1]) - 1;
+                    CheckHitOrMiss(PosX, PosY, turn);
+                    deploy = true;
+                } 
+                else
+                {
+                    // error message for handling
+                    PrintWithYellow("\nCoordinates invalid, retry.\n");
+                }
+            } while (deploy == false);
+        }
+        static void ComputerTurn(int turn)
+        {
+            Random rnd = new Random();
+            int PosX = rnd.Next(0,8);
+            int PosY = rnd.Next(0,8);
+            CheckHitOrMiss(PosX, PosY, turn);
+            PrintWithYellow($"Computer attacked : {chars[PosX]},{PosY+1}\n");
+        }
+        static void PlayNewGame()
+        {
+            // int to count player strikes
+            PlayerStrikes = 0;
+            // int to count computer strikes
+            ComputerStrikes = 0;
+
+            // calls the subroutine to set then draw the playing grid
+            SetGrids();
+            // intiates player turns and starts game.
+            PlayGame();
+        }
+        static void PlayGame()
+        {
+            // do while for turn deciding, even is user - odd is computer.
+            do {
+                // modulus allows to determine whether int turn is even or odd.
+                if (turn % 2 == 0)
+                {
+                    PlayerTurn(turn);
+                    turn++;
+                }
+                else if (turn % 2 == 1)
+                {
+                    ComputerTurn(turn);
+                    turn++;
+                }
+                else
+                {
+                    System.Console.WriteLine("Error");
+                }
+                SaveFile(turn);
+            } while (PlayerStrikes < 5 && ComputerStrikes < 5);
+
+            if (PlayerStrikes == 5)
+            {
+                PrintWithBlue("Player Wins!");
+            }
+            else if (ComputerStrikes == 5)
+            {
+                PrintWithRed("Computer Wins!");
+            }
+        }
+        static void ResumeFromSave()
+        {
+            PrintWithBlue("Resuming last game...");
+            ReadAndLoadFile();
+            PrintWithBlue("Data loaded successfully!");
+            DrawGrid();
+            PlayGame();
+        }
+        static string ShowInstruction()
+        {
+            // prints the rules of the game 
+            return "\n#############################\n\n||OBJECTIVE OF THE GAME||\n\nBe the first player to sink all 5 of your opponents ships!\n\n||AIM OF THE GAME||\n\nBattleships is a strategy type guessing game for two players. It is played on grids of which each player's fleet of warships are marked. The locations of the fleets are concealed from the other player. Players alternate turns calling 'shots' at the other player's ships, and the objective of the game is to destroy the opposing player's fleet.\n\n||SHIPS||\n\nEach player has three classes of ships in their fleets: \n2 x Destroyers (2 cells)\n2 x Submarines (2 cells)\n1 x carrier (3 cells)\n\n#############################";
+        }
+    }
+}    
