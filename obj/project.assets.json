@@ -13,11 +13,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\rishi\\Documents\\Github\\CS-A-Level\\YEAR 1\\Battleships\\Battleships.csproj",
+      "projectUniqueName": "C:\\Users\\rishi\\Documents\\Github\\BattleshipsProject2022\\Battleships.csproj",
       "projectName": "Battleships",
-      "projectPath": "C:\\Users\\rishi\\Documents\\Github\\CS-A-Level\\YEAR 1\\Battleships\\Battleships.csproj",
+      "projectPath": "C:\\Users\\rishi\\Documents\\Github\\BattleshipsProject2022\\Battleships.csproj",
       "packagesPath": "C:\\Users\\rishi\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\rishi\\Documents\\Github\\CS-A-Level\\YEAR 1\\Battleships\\obj\\",
+      "outputPath": "C:\\Users\\rishi\\Documents\\Github\\BattleshipsProject2022\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\rishi\\AppData\\Roaming\\NuGet\\NuGet.Config"
